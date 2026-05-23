@@ -1,6 +1,8 @@
 import pygame
 import math
 
+from weapon import Weapon
+
 pygame.init()
 
 class Player: 
@@ -16,6 +18,8 @@ class Player:
 
         self.x = 400
         self.y = 300
+        
+        self.weapon = Weapon()
 
     def update(self):
 
@@ -37,10 +41,22 @@ class Player:
 
         dx = mouse_x - self.x
         dy = mouse_y - self.y
+        
+        self.weapon.update(
+            self.x,
+            self.y,
+            mouse_x,
+            mouse_y
+        )
 
         self.angle = math.degrees(
             math.atan2(dy, dx)
         )
+        
+        mouse_buttons = pygame.mouse.get_pressed()
+
+        if mouse_buttons[0]:
+            self.weapon.shoot()
 
     def draw(self, screen):
 
@@ -74,6 +90,15 @@ class Player:
         player_surface.blit(
             self.right_hand,
             (center_x + 6, center_y - 5)
+        )
+        
+        weapon_x = center_x + 7
+        weapon_y = center_y - 18
+        
+        self.weapon.draw(
+            player_surface,
+            weapon_x,
+            weapon_y
         )
 
         # gira o personagem inteiro

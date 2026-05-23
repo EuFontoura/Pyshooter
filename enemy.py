@@ -1,6 +1,7 @@
 import pygame
 import math
 
+from weapon import Weapon
 
 class Enemy:
 
@@ -27,6 +28,8 @@ class Enemy:
 
         self.speed = 2
         self.angle = 0
+        
+        self.weapon = Weapon()
 
 
     def update(self, player):
@@ -46,7 +49,7 @@ class Enemy:
         )
 
         # evita divisão por zero
-        if distance > 0:
+        if distance > 200:
 
             # normaliza vetor
             dx /= distance
@@ -55,7 +58,16 @@ class Enemy:
             # move até player
             self.x += dx * self.speed
             self.y += dy * self.speed
+            
+        if distance < 100:
 
+            # normaliza vetor
+            dx /= distance
+            dy /= distance
+
+            # move até player
+            self.x -= dx * self.speed
+            self.y -= dy * self.speed
 
     def draw(self, screen):
 
@@ -87,6 +99,15 @@ class Enemy:
         enemy_surface.blit(
             self.right_hand,
             (center_x + 6, center_y - 5)
+        )
+        
+        weapon_x = center_x + 7
+        weapon_y = center_y - 18
+        
+        self.weapon.draw(
+            enemy_surface,
+            weapon_x,
+            weapon_y
         )
 
         rotated_enemy = pygame.transform.rotate(
