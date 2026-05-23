@@ -4,6 +4,7 @@ from player import Player
 pygame.init()
 screen = pygame.display.set_mode((1280, 720))
 clock = pygame.time.Clock()
+pygame.mouse.set_visible(False)
 
 player = Player()
 
@@ -11,6 +12,10 @@ running = True
 dt = 0
 
 player_pos = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 2)
+
+crosshair = pygame.image.load(
+    "assets/ui/aim.png"
+).convert_alpha()
 
 while running:
     for event in pygame.event.get():
@@ -21,6 +26,17 @@ while running:
     screen.fill((30, 30, 30))
 
     player.draw(screen)
+
+    mouse_x, mouse_y = pygame.mouse.get_pos()
+
+    crosshair_rect = crosshair.get_rect(
+        center=(mouse_x, mouse_y)
+    )
+
+    screen.blit(
+        crosshair,
+        crosshair_rect
+    )
 
     pygame.display.flip()
 
