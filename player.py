@@ -1,4 +1,5 @@
 import pygame
+import math
 
 pygame.init()
 
@@ -32,25 +33,57 @@ class Player:
         if keys[pygame.K_d]:
                 self.x += 5
 
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+
+        dx = mouse_x - self.x
+        dy = mouse_y - self.y
+
+        self.angle = math.degrees(
+            math.atan2(dy, dx)
+        )
+
     def draw(self, screen):
 
-        screen.blit(
+        # tamanho da área do personagem
+        canvas_size = 100
+
+        player_surface = pygame.Surface(
+            (canvas_size, canvas_size),
+            pygame.SRCALPHA
+        )
+
+        center_x = canvas_size // 2
+        center_y = canvas_size // 2
+
+        # desenha todas as partes juntas
+        player_surface.blit(
             self.body,
-            (self.x, self.y)
+            (center_x - 10, center_y - 10)
         )
 
-
-        screen.blit(
-            self.left_hand,
-            (self.x - 0, self.y - 5)
-        )
-
-        screen.blit(
-            self.right_hand,
-            (self.x + 14, self.y)
-        )
-
-        screen.blit(
+        player_surface.blit(
             self.head,
-            (self.x, self.y + 3)
+            (center_x - 7, center_y - 7)
         )
+
+        player_surface.blit(
+            self.left_hand,
+            (center_x - 12, center_y - 20)
+        )
+
+        player_surface.blit(
+            self.right_hand,
+            (center_x + 6, center_y - 5)
+        )
+
+        # gira o personagem inteiro
+        rotated_player = pygame.transform.rotate(
+            player_surface,
+            -self.angle - 120
+        )
+
+        rect = rotated_player.get_rect(
+            center=(self.x, self.y)
+        )
+
+        screen.blit(rotated_player, rect)
