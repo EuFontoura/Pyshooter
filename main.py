@@ -1,14 +1,17 @@
 import pygame 
 from player import Player
 from enemy import Enemy
+from ui import UI
 
 pygame.init()
 screen = pygame.display.set_mode((1280, 720))
 clock = pygame.time.Clock()
 pygame.mouse.set_visible(False)
 
+
 player = Player()
 enemy = Enemy(100, 100)
+ui = UI()
 
 running = True
 dt = 0
@@ -30,6 +33,7 @@ while running:
 
     player.draw(screen)
     enemy.draw(screen)
+    ui.draw(screen, player)
 
     mouse_x, mouse_y = pygame.mouse.get_pos()
 

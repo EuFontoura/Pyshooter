@@ -42,6 +42,9 @@ class Weapon:
         self.show_flash = False
         self.flash_duration = 20
         self.flash_start = 0
+        
+        self.magazine_size = 100
+        self.ammo = 100 
 
 
     def update(self, owner_x, owner_y, target_x, target_y):

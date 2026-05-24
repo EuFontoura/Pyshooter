@@ -20,6 +20,12 @@ class Player:
         self.y = 300
         
         self.weapon = Weapon()
+        
+        self.max_health = 100
+        self.health = self.max_health
+
+        self.max_shield = 100
+        self.shield = self.max_shield
 
     def update(self):
 
