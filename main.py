@@ -31,7 +31,7 @@ while running:
     bullet = player.update()
     if bullet:
         projectiles.append(bullet)
-        
+
     enemy_bullet = enemy.update(player)
     if enemy_bullet:
         projectiles.append(enemy_bullet)
@@ -62,7 +62,7 @@ while running:
     mouse_x, mouse_y = pygame.mouse.get_pos()
 
     crosshair_rect = crosshair.get_rect(
-        center=(mouse_x, mouse_y)
+        center=(mouse_x, mouse_y - 15)
     )
 
     screen.blit(
