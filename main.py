@@ -12,6 +12,7 @@ pygame.mouse.set_visible(False)
 player = Player()
 enemy = Enemy(100, 100)
 ui = UI()
+projectiles = []
 
 running = True
 dt = 0
@@ -27,12 +28,35 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-    player.update()
+    bullet = player.update()
+    if bullet:
+        projectiles.append(bullet)
+        
+    enemy_bullet = enemy.update(player)
+    if enemy_bullet:
+        projectiles.append(enemy_bullet)
+
     enemy.update(player)
+
     screen.fill((30, 30, 30))
+
+    for projectile in projectiles:
+        projectile.update()
+
+    for projectile in projectiles[:]:
+
+        if (
+            projectile.x < 0
+            or projectile.x > screen.get_width()
+            or projectile.y < 0
+            or projectile.y > screen.get_height()
+        ):
+            projectiles.remove(projectile)
 
     player.draw(screen)
     enemy.draw(screen)
+    for projectile in projectiles:
+        projectile.draw(screen)
     ui.draw(screen, player)
 
     mouse_x, mouse_y = pygame.mouse.get_pos()

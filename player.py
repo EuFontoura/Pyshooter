@@ -62,7 +62,11 @@ class Player:
         mouse_buttons = pygame.mouse.get_pressed()
 
         if mouse_buttons[0]:
-            self.weapon.shoot()
+            bullet = self.weapon.shoot(
+                self.x, 
+                self.y)
+            return bullet
+        return None
 
     def draw(self, screen):
 

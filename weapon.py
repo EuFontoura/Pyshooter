@@ -1,6 +1,6 @@
 import pygame
 import math
-
+from projectile import Projectile
 
 class Weapon:
 
@@ -18,7 +18,10 @@ class Weapon:
         self.muzzle_flash = pygame.image.load(
         "assets/gun/fire/730.png"
         ).convert_alpha()
-        
+
+        self.muzzle_offset_x = 35
+        self.muzzle_offset_y = 14
+
         self.muzzle_flash = pygame.transform.rotate(
             self.muzzle_flash,
             +35
@@ -29,6 +32,8 @@ class Weapon:
 
         # tempo entre tiros
         self.cooldown = 1000 / self.fire_rate
+
+        self.projectile_speed = 15
 
         # último disparo
         self.last_shot = 0
@@ -45,6 +50,7 @@ class Weapon:
         
         self.magazine_size = 100
         self.ammo = 100 
+        self.angle = 0
 
 
     def update(self, owner_x, owner_y, target_x, target_y):
@@ -55,20 +61,51 @@ class Weapon:
         self.angle = math.degrees(
             math.atan2(dy, dx)
         )
-    def shoot(self):
+
+    def shoot(self, x, y):
 
         current_time = pygame.time.get_ticks()
 
         can_shoot = (
-            current_time - self.last_shot
-            >= self.cooldown
+            current_time - self.last_shot >= self.cooldown
         )
 
         if can_shoot:
 
             self.last_shot = current_time
-
             self.shot_sound.play()
+
+            muzzle_x, muzzle_y = self.get_muzzle_position(x, y)
+
+            return Projectile(
+                muzzle_x,
+                muzzle_y,
+                self.angle,
+                self.projectile_speed
+            )
+
+        return None
+    
+    def get_muzzle_position(self, x, y):
+
+        radians = math.radians(self.angle)
+
+        # offset no espaço local da arma
+        local_x = self.muzzle_offset_x
+        local_y = self.muzzle_offset_y
+
+        # aplica rotação
+        muzzle_x = x + (
+            local_x * math.cos(radians) -
+            local_y * math.sin(radians)
+        )
+
+        muzzle_y = y + (
+            local_x * math.sin(radians) +
+            local_y * math.cos(radians)
+        )
+
+        return muzzle_x, muzzle_y
 
     def draw(self, screen, x, y):
 
