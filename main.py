@@ -76,6 +76,7 @@ while running:
                 projectiles.remove(projectile)
                 if enemy.health <= 0:
                     die_sound.play()
+                    enemy.weapon.reload_sound.stop()
                     dead_bodies.append({
                         'x': enemy.x,
                         'y': enemy.y,
@@ -87,6 +88,7 @@ while running:
                 projectiles.remove(projectile)
                 if player.health <= 0:
                     die_sound.play()
+                    player.weapon.reload_sound.stop()
                     dead_bodies.append({
                         'x': player.x,
                         'y': player.y,

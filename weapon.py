@@ -43,14 +43,22 @@ class Weapon:
             "assets/sounds/shoot.mp3"
         )
         
+        self.reload_sound = pygame.mixer.Sound(
+            "assets/sounds/reload.mp3"
+        )
+        
         # imagem flash
         self.show_flash = False
         self.flash_duration = 20
         self.flash_start = 0
         
-        self.magazine_size = 100
-        self.ammo = 100 
+        self.magazine_size = 50
+        self.ammo = 50 
         self.angle = 0
+
+        self.is_reloading = False
+        self.reload_time = 2000 # 2 seconds
+        self.reload_start = 0
 
 
     def update(self, owner_x, owner_y, target_x, target_y):
@@ -62,7 +70,22 @@ class Weapon:
             math.atan2(dy, dx)
         )
 
+        # Check for reload completion
+        if self.is_reloading:
+            current_time = pygame.time.get_ticks()
+            if current_time - self.reload_start >= self.reload_time:
+                self.ammo = self.magazine_size
+                self.is_reloading = False
+                self.reload_sound.stop()
+
     def shoot(self, x, y, owner):
+
+        if self.is_reloading:
+            return None
+
+        if self.ammo <= 0:
+            self.start_reload()
+            return None
 
         current_time = pygame.time.get_ticks()
 
@@ -72,6 +95,7 @@ class Weapon:
 
         if can_shoot:
 
+            self.ammo -= 1
             self.last_shot = current_time
             self.shot_sound.play()
 
@@ -86,6 +110,12 @@ class Weapon:
             )
 
         return None
+
+    def start_reload(self):
+        if not self.is_reloading and self.ammo < self.magazine_size:
+            self.is_reloading = True
+            self.reload_start = pygame.time.get_ticks()
+            self.reload_sound.play(loops=-1)
     
     def get_muzzle_position(self, x, y):
 
