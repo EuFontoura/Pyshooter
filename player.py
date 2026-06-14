@@ -26,6 +26,7 @@ class Player:
 
         self.max_shield = 100
         self.shield = self.max_shield
+        self.angle = 0
 
     def update(self):
 
