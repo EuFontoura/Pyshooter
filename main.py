@@ -32,11 +32,10 @@ while running:
     if bullet:
         projectiles.append(bullet)
 
-    enemy_bullet = enemy.update(player)
-    if enemy_bullet:
-        projectiles.append(enemy_bullet)
-
-    enemy.update(player)
+    if enemy.health > 0:
+        enemy_bullet = enemy.update(player)
+        if enemy_bullet:
+            projectiles.append(enemy_bullet)
 
     screen.fill((30, 30, 30))
 
@@ -44,7 +43,6 @@ while running:
         projectile.update()
 
     for projectile in projectiles[:]:
-
         if (
             projectile.x < 0
             or projectile.x > screen.get_width()
@@ -52,9 +50,21 @@ while running:
             or projectile.y > screen.get_height()
         ):
             projectiles.remove(projectile)
+            continue
+
+        # Collision detection
+        if projectile.owner == "player" and enemy.health > 0:
+            if projectile.rect.colliderect(enemy.get_rect()):
+                enemy.take_damage(20)
+                projectiles.remove(projectile)
+        elif projectile.owner == "enemy" and player.health > 0:
+            if projectile.rect.colliderect(player.get_rect()):
+                player.take_damage(20)
+                projectiles.remove(projectile)
 
     player.draw(screen)
-    enemy.draw(screen)
+    if enemy.health > 0:
+        enemy.draw(screen)
     for projectile in projectiles:
         projectile.draw(screen)
     ui.draw(screen, player)

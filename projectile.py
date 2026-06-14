@@ -3,13 +3,14 @@ import math
 
 class Projectile:
 
-    def __init__(self, x, y, angle, speed):
+    def __init__(self, x, y, angle, speed, owner):
 
         self.x = x
         self.y = y
 
         self.speed = speed
         self.angle = angle
+        self.owner = owner
 
         radians = math.radians(angle)
 

@@ -64,9 +64,23 @@ class Player:
         if mouse_buttons[0]:
             bullet = self.weapon.shoot(
                 self.x, 
-                self.y)
+                self.y,
+                "player"
+            )
             return bullet
         return None
+
+    def get_rect(self):
+        # Return a fixed collision bounding box centered around the player
+        return pygame.Rect(self.x - 20, self.y - 20, 40, 40)
+
+    def take_damage(self, amount):
+        if self.shield >= amount:
+            self.shield -= amount
+        else:
+            amount -= self.shield
+            self.shield = 0
+            self.health = max(0, self.health - amount)
 
     def draw(self, screen):
 

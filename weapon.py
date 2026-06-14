@@ -62,7 +62,7 @@ class Weapon:
             math.atan2(dy, dx)
         )
 
-    def shoot(self, x, y):
+    def shoot(self, x, y, owner):
 
         current_time = pygame.time.get_ticks()
 
@@ -81,7 +81,8 @@ class Weapon:
                 muzzle_x,
                 muzzle_y,
                 self.angle,
-                self.projectile_speed
+                self.projectile_speed,
+                owner
             )
 
         return None

@@ -36,6 +36,9 @@ class Enemy:
 
         self.weapon = Weapon()
 
+        self.max_health = 100
+        self.health = self.max_health
+
     def update(self, player):
 
         dx = player.x - self.x
@@ -74,7 +77,9 @@ class Enemy:
             if self.can_see_player(player) and distance < 250:
                 bullet = self.weapon.shoot(
                     self.x,
-                    self.y)
+                    self.y,
+                    "enemy"
+                )
 
         return bullet
 
@@ -94,6 +99,13 @@ class Enemy:
         angle_difference = (angle_difference + 180) % 360 - 180
 
         return abs(angle_difference) < (self.fov / 2)
+
+    def get_rect(self):
+        # Return a fixed collision bounding box centered around the enemy
+        return pygame.Rect(self.x - 20, self.y - 20, 40, 40)
+
+    def take_damage(self, amount):
+        self.health = max(0, self.health - amount)
 
     def draw(self, screen):
 
@@ -146,3 +158,29 @@ class Enemy:
         )
 
         screen.blit(rotated_enemy, rect)
+
+        # Draw health bar above enemy if damaged (health is less than max health)
+        if self.health < self.max_health and self.health > 0:
+            bar_width = 40
+            bar_height = 5
+            bar_x = self.x - bar_width // 2
+            bar_y = self.y - 45
+
+            # Background bar (dark gray)
+            pygame.draw.rect(screen, (40, 40, 40), (bar_x, bar_y, bar_width, bar_height))
+
+            # Health ratio and fill width
+            ratio = self.health / self.max_health
+            fill_width = int(bar_width * ratio)
+
+            # Interpolate color from green (0, 255, 0) to red (255, 0, 0)
+            r = int(255 * (1 - ratio))
+            g = int(255 * ratio)
+            b = 0
+            color = (r, g, b)
+
+            # Draw filled health bar
+            pygame.draw.rect(screen, color, (bar_x, bar_y, fill_width, bar_height))
+
+            # Draw thin border around the health bar
+            pygame.draw.rect(screen, (0, 0, 0), (bar_x - 1, bar_y - 1, bar_width + 2, bar_height + 2), 1)
