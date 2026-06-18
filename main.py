@@ -2,6 +2,7 @@ import pygame
 from player import Player
 from enemy import Enemy
 from ui import UI
+from level import Level
 
 pygame.init()
 screen = pygame.display.set_mode((1280, 720))
@@ -9,8 +10,15 @@ clock = pygame.time.Clock()
 pygame.mouse.set_visible(False)
 
 
-player = Player()
-enemy = Enemy(100, 100)
+level = Level("assets/maps/fase1_collision.png")
+
+player = Player(*level.player_spawn)
+enemies = []
+
+for x, y in level.enemy_spawns:
+    enemies.append(
+        Enemy(x, y)
+    )
 ui = UI()
 projectiles = []
 
@@ -39,16 +47,21 @@ while running:
             running = False
 
     if player.health > 0:
-        bullet = player.update()
+        bullet = player.update(level.walls)
         if bullet:
             projectiles.append(bullet)
 
-    if enemy.health > 0:
+    for enemy in enemies:
+
+        if enemy.health <= 0:
+            continue
+
         enemy_bullet = enemy.update(player)
+
         if enemy_bullet:
             projectiles.append(enemy_bullet)
 
-    screen.fill((30, 30, 30))
+    level.draw(screen)
 
     # Render dead bodies first (behind active entities)
     for body in dead_bodies:
@@ -70,25 +83,59 @@ while running:
             continue
 
         # Collision detection
-        if projectile.owner == "player" and enemy.health > 0:
-            if projectile.rect.colliderect(enemy.get_rect()):
-                enemy.take_damage(20)
-                projectiles.remove(projectile)
+        if projectile.owner == "player":
+
+            hit_enemy = False
+
+            for enemy in enemies:
+
                 if enemy.health <= 0:
-                    die_sound.play()
-                    enemy.weapon.reload_sound.stop()
-                    dead_bodies.append({
-                        'x': enemy.x,
-                        'y': enemy.y,
-                        'angle': enemy.angle
-                    })
+                    continue
+
+                if projectile.rect.colliderect(
+                    enemy.get_rect()
+                ):
+
+                    enemy.take_damage(20)
+
+                    if projectile in projectiles:
+                        projectiles.remove(projectile)
+
+                    if enemy.health <= 0:
+
+                        die_sound.play()
+
+                        enemy.weapon.reload_sound.stop()
+
+                        dead_bodies.append({
+                            'x': enemy.x,
+                            'y': enemy.y,
+                            'angle': enemy.angle
+                        })
+
+                    hit_enemy = True
+                    break
+
+            if hit_enemy:
+                continue
+
         elif projectile.owner == "enemy" and player.health > 0:
-            if projectile.rect.colliderect(player.get_rect()):
+
+            if projectile.rect.colliderect(
+                player.get_rect()
+            ):
+
                 player.take_damage(20)
-                projectiles.remove(projectile)
+
+                if projectile in projectiles:
+                    projectiles.remove(projectile)
+
                 if player.health <= 0:
+
                     die_sound.play()
+
                     player.weapon.reload_sound.stop()
+
                     dead_bodies.append({
                         'x': player.x,
                         'y': player.y,
@@ -97,8 +144,11 @@ while running:
 
     if player.health > 0:
         player.draw(screen)
-    if enemy.health > 0:
-        enemy.draw(screen)
+    for enemy in enemies:
+
+        if enemy.health > 0:
+            enemy.draw(screen)
+
     for projectile in projectiles:
         projectile.draw(screen)
     ui.draw(screen, player)
@@ -114,6 +164,12 @@ while running:
         crosshair_rect
     )
 
+    alive_enemies = sum(
+    1
+    for enemy in enemies
+    if enemy.health > 0
+)
+    print(alive_enemies)
     pygame.display.flip()
 
     dt = clock.tick(60) / 1000

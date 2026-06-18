@@ -6,7 +6,7 @@ from weapon import Weapon
 pygame.init()
 
 class Player: 
-    def __init__(self):
+    def __init__(self, x=400, y=300):
         
         self.body = pygame.image.load("assets/characters/player/player_body.png").convert_alpha()
 
@@ -16,8 +16,8 @@ class Player:
 
         self.right_hand = pygame.image.load("assets/characters/player/player_right.png").convert_alpha()
 
-        self.x = 400
-        self.y = 300
+        self.x = x
+        self.y = y
         
         self.weapon = Weapon()
         
@@ -29,21 +29,38 @@ class Player:
         self.angle = 0
         self.small_font = pygame.font.SysFont("arial", 12, bold=True)
 
-    def update(self):
+    def update(self, walls):
 
         keys = pygame.key.get_pressed()
 
-        if keys[pygame.K_w]:
-                self.y -= 5
+        speed = 5
 
-        if keys[pygame.K_s]:
-                self.y += 5
+        old_x = self.x
 
         if keys[pygame.K_a]:
-                self.x -= 5
+            self.x -= speed
 
         if keys[pygame.K_d]:
-                self.x += 5
+            self.x += speed
+
+        for wall in walls:
+            if self.get_rect().colliderect(wall):
+                self.x = old_x
+                break
+
+
+        old_y = self.y
+
+        if keys[pygame.K_w]:
+            self.y -= speed
+
+        if keys[pygame.K_s]:
+            self.y += speed
+
+        for wall in walls:
+            if self.get_rect().colliderect(wall):
+                self.y = old_y
+                break
 
         if keys[pygame.K_r]:
             self.weapon.start_reload()
