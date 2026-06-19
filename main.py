@@ -10,19 +10,21 @@ screen = pygame.display.set_mode((1280, 720))
 clock = pygame.time.Clock()
 pygame.mouse.set_visible(False)
 
-# Carrega a imagem de vitória
 win_menu_image = pygame.image.load("assets/ui/win_menu.png").convert_alpha()
 win_menu_rect = win_menu_image.get_rect(center=(1280 // 2, 720 // 2))
 
-# =========================================================================
-# AJUSTE AQUI: Altere os números abaixo para mover a caixa vermelha na tela
-# Parâmetros: Rect( X,  Y, Largura, Altura)
-# =========================================================================
-ok_button_rect = pygame.Rect(540, 360, 200, 60) 
+lose_menu_image = pygame.image.load("assets/ui/lose_menu.png").convert_alpha()
+lose_menu_rect = lose_menu_image.get_rect(center=(1280 // 2, 720 // 2))
+
+ok_button_rect = pygame.Rect(540, 360, 200, 60)       
+
+yes_button_rect = pygame.Rect(480, 360, 160, 60)     
+no_button_rect = pygame.Rect(660, 360, 160, 60)     
+
 
 def reset_game():
     """Função auxiliar para reiniciar todas as variáveis do jogo"""
-    global level, player, enemies, impacts, projectiles, dead_bodies, game_won
+    global level, player, enemies, impacts, projectiles, dead_bodies, game_won, game_lost
     level = Level("assets/maps/fase1_collision.png")
     player = Player(*level.player_spawn)
     enemies = []
@@ -30,11 +32,11 @@ def reset_game():
     projectiles = []
     dead_bodies = []
     game_won = False
+    game_lost = False
     
     for x, y in level.enemy_spawns:
         enemies.append(Enemy(x, y))
 
-# Inicializa o jogo pela primeira vez
 level = Level("assets/maps/fase1_collision.png")
 player = Player(*level.player_spawn)
 enemies = []
@@ -48,6 +50,7 @@ projectiles = []
 
 running = True
 game_won = False 
+game_lost = False 
 dt = 0
 
 crosshair = pygame.image.load("assets/ui/aim.png").convert_alpha()
@@ -67,11 +70,15 @@ while running:
             if game_won:
                 if ok_button_rect.collidepoint(mouse_x, mouse_y):
                     reset_game()
+            
+            elif game_lost:
+                if yes_button_rect.collidepoint(mouse_x, mouse_y):
+                    reset_game()
+                elif no_button_rect.collidepoint(mouse_x, mouse_y):
+                    running = False
 
     if game_won:
-        pygame.mouse.set_visible(True) # Mostra a seta do mouse padrão do Windows
-        
-        # Desenha o fundo estático
+        pygame.mouse.set_visible(True)
         level.draw(screen)
         for body in dead_bodies:
             rotated_dead_body = pygame.transform.rotate(dead_body_image, -body['angle'] - 120)
@@ -81,20 +88,35 @@ while running:
             if enemy.health > 0: enemy.draw(screen)
         if player.health > 0: player.draw(screen)
         
-        # Desenha a imagem de vitória
         screen.blit(win_menu_image, win_menu_rect)
+        pygame.display.flip()
+        clock.tick(60)
+        continue
+
+    if game_lost:
+        pygame.mouse.set_visible(True)
+        level.draw(screen)
+        for body in dead_bodies:
+            rotated_dead_body = pygame.transform.rotate(dead_body_image, -body['angle'] - 120)
+            rect = rotated_dead_body.get_rect(center=(body['x'], body['y']))
+            screen.blit(rotated_dead_body, rect)
+        for enemy in enemies:
+            if enemy.health > 0: enemy.draw(screen)
+        
+        screen.blit(lose_menu_image, lose_menu_rect)
 
         pygame.display.flip()
         clock.tick(60)
         continue
 
-    # --- GAMEPLAY EM EXECUÇÃO ---
     pygame.mouse.set_visible(False)
 
     if player.health > 0:
         bullet = player.update(level.walls)
         if bullet:
             projectiles.append(bullet)
+    else:
+        game_lost = True
 
     for enemy in enemies:
         if enemy.health <= 0:
