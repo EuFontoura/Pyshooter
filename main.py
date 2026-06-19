@@ -73,6 +73,7 @@ while running:
         projectile.update()
 
     for projectile in projectiles[:]:
+
         if (
             projectile.x < 0
             or projectile.x > screen.get_width()
@@ -80,6 +81,18 @@ while running:
             or projectile.y > screen.get_height()
         ):
             projectiles.remove(projectile)
+            continue
+
+        for wall in level.walls:
+
+            if projectile.rect.colliderect(wall):
+
+                if projectile in projectiles:
+                    projectiles.remove(projectile)
+
+                break
+
+        if projectile not in projectiles:
             continue
 
         # Collision detection
