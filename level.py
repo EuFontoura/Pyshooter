@@ -88,7 +88,7 @@ class Level:
                     )
 
                     if not left_yellow and not top_yellow:
-                        self.exit_point = (x, y)
+                        self.exit_point = pygame.Rect(x - 15, y - 15, 30, 30)
 
     def load_collisions(self):
 
