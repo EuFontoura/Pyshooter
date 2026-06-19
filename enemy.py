@@ -1,27 +1,19 @@
 import pygame
 import math
+import heapq
 
 from weapon import Weapon
 
 class Enemy:
+    # --- Variáveis de Classe para o Pathfinding ---
+    grid_cache = None
+    grid_size = 32 # Tamanho de cada "bloco" mental do inimigo
 
     def __init__(self, x, y):
-
-        self.body = pygame.image.load(
-            "assets/characters/enemy/enemy_body.png"
-        ).convert_alpha()
-
-        self.head = pygame.image.load(
-            "assets/characters/enemy/enemy_head.png"
-        ).convert_alpha()
-
-        self.left_hand = pygame.image.load(
-            "assets/characters/enemy/enemy_left.png"
-        ).convert_alpha()
-
-        self.right_hand = pygame.image.load(
-            "assets/characters/enemy/enemy_right.png"
-        ).convert_alpha()
+        self.body = pygame.image.load("assets/characters/enemy/enemy_body.png").convert_alpha()
+        self.head = pygame.image.load("assets/characters/enemy/enemy_head.png").convert_alpha()
+        self.left_hand = pygame.image.load("assets/characters/enemy/enemy_left.png").convert_alpha()
+        self.right_hand = pygame.image.load("assets/characters/enemy/enemy_right.png").convert_alpha()
 
         self.x = x
         self.y = y
@@ -31,8 +23,8 @@ class Enemy:
 
         self.alerted = False
 
-        self.vision_distance = 300
-        self.fov = 70
+        self.vision_distance = 700 
+        self.fov = 160 
 
         self.weapon = Weapon()
 
@@ -40,47 +32,75 @@ class Enemy:
         self.health = self.max_health
         self.small_font = pygame.font.SysFont("arial", 12, bold=True)
 
-    def update(self, player):
+        # --- Variáveis do Pathfinding ---
+        self.path = []
+        self.last_path_time = 0
 
-        dx = player.x - self.x
-        dy = player.y - self.y
+    def update(self, player, walls):
+            dx = player.x - self.x
+            dy = player.y - self.y
+            distance = math.sqrt(dx ** 2 + dy ** 2)
+            can_see = self.can_see_player(player, walls)
 
-        distance = math.sqrt(dx ** 2 + dy ** 2)
-
-        if not self.alerted:
-            if self.can_see_player(player):
+            if not self.alerted and can_see:
                 self.alerted = True
 
-        bullet = None
+            bullet = None
+            current_time = pygame.time.get_ticks()
 
-        if self.alerted:
+            if self.alerted:
+                # Só atualiza a rota complexa a cada 500ms
+                if current_time - self.last_path_time > 500:
+                    self.path = self.find_path(player.x, player.y, walls)
+                    self.last_path_time = current_time
 
-            self.angle = math.degrees(math.atan2(dy, dx))
+                # Se temos um caminho, vamos seguir o primeiro ponto (waypoint)
+                if self.path and distance > 100:
+                    target_x, target_y = self.path[0]
+                    dir_x = target_x - self.x
+                    dir_y = target_y - self.y
+                    dist_to_node = math.sqrt(dir_x**2 + dir_y**2)
 
-            if distance > 100 and distance > 0:
-                dx /= distance
-                dy /= distance
-                self.x += dx * self.speed
-                self.y += dy * self.speed
+                    # Se chegou muito perto do waypoint atual, descarta ele para focar no próximo
+                    if dist_to_node < self.speed * 2:
+                        self.path.pop(0)
+                    elif dist_to_node > 0:
+                        dir_x /= dist_to_node
+                        dir_y /= dist_to_node
 
-            self.weapon.update(
-                self.x,
-                self.y,
-                player.x,
-                player.y - 15
-            )
+                        # Aplica movimento com colisão física por segurança
+                        old_x = self.x
+                        self.x += dir_x * self.speed
+                        for wall in walls:
+                            if self.get_rect().colliderect(wall):
+                                self.x = old_x
+                                break
 
-            if self.can_see_player(player) and distance < 250:
-                bullet = self.weapon.shoot(
-                    self.x,
-                    self.y,
-                    "enemy"
-                )
+                        old_y = self.y
+                        self.y += dir_y * self.speed
+                        for wall in walls:
+                            if self.get_rect().colliderect(wall):
+                                self.y = old_y
+                                break
 
-        return bullet
+                # Direcionamento da visão do inimigo
+                if can_see:
+                    # Se vê o jogador, mira diretamente nele
+                    self.angle = math.degrees(math.atan2(dy, dx))
+                elif self.path:
+                    # Se não vê, olha para onde está andando
+                    target_x, target_y = self.path[0]
+                    self.angle = math.degrees(math.atan2(target_y - self.y, target_x - self.x))
 
-    def can_see_player(self, player):
+                # Disparo
+                self.weapon.update(self.x, self.y, player.x, player.y - 15)
 
+                if can_see and distance < 350:
+                    bullet = self.weapon.shoot(self.x, self.y, "enemy")
+
+            return bullet
+
+    def can_see_player(self, player, walls):
         dx = player.x - self.x
         dy = player.y - self.y
 
@@ -94,13 +114,84 @@ class Enemy:
         angle_difference = angle_to_player - self.angle
         angle_difference = (angle_difference + 180) % 360 - 180
 
-        return abs(angle_difference) < (self.fov / 2)
+        if abs(angle_difference) > (self.fov / 2):
+            return False
+
+        for wall in walls:
+            if wall.clipline(self.x, self.y, player.x, player.y):
+                return False 
+
+        return True
 
     def get_rect(self):
         return pygame.Rect(self.x - 20, self.y - 20, 40, 40)
 
     def take_damage(self, amount):
         self.health = max(0, self.health - amount)
+
+    def find_path(self, target_x, target_y, walls):
+        # 1. Gera o mapa mental de obstáculos apenas uma vez para todos os inimigos
+        if Enemy.grid_cache is None:
+            Enemy.grid_cache = set()
+            for x in range(0, 1280, Enemy.grid_size):
+                for y in range(0, 720, Enemy.grid_size):
+                    # Usamos inflate(16, 16) para engordar virtualmente a parede 
+                    # e impedir que o inimigo raspe os ombros nas quinas
+                    rect = pygame.Rect(x, y, Enemy.grid_size, Enemy.grid_size).inflate(16, 16)
+                    if rect.collidelist(walls) != -1:
+                        Enemy.grid_cache.add((x // Enemy.grid_size, y // Enemy.grid_size))
+
+        # 2. Converte as coordenadas reais para a grade
+        start_node = (int(self.x // Enemy.grid_size), int(self.y // Enemy.grid_size))
+        end_node = (int(target_x // Enemy.grid_size), int(target_y // Enemy.grid_size))
+
+        if start_node == end_node:
+            return []
+
+        open_set = []
+        heapq.heappush(open_set, (0, start_node))
+        came_from = {}
+        g_score = {start_node: 0}
+
+        # 3. Inicia a busca A*
+        while open_set:
+            _, current = heapq.heappop(open_set)
+
+            if current == end_node:
+                path = []
+                while current in came_from:
+                    # Converte o nó da grade de volta para o meio do pixel real na tela
+                    path.append((
+                        current[0] * Enemy.grid_size + Enemy.grid_size // 2,
+                        current[1] * Enemy.grid_size + Enemy.grid_size // 2
+                    ))
+                    current = came_from[current]
+                path.reverse()
+                return path
+
+            # Checa os 8 vizinhos (cima, baixo, lados e diagonais)
+            for dx, dy in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
+                neighbor = (current[0] + dx, current[1] + dy)
+
+                # Evita sair da tela
+                if not (0 <= neighbor[0] < 1280 // Enemy.grid_size and 0 <= neighbor[1] < 720 // Enemy.grid_size):
+                    continue
+
+                # Ignora se for parede
+                if neighbor in Enemy.grid_cache:
+                    continue
+
+                # Peso do movimento (diagonal custa um pouco mais, ~1.4)
+                tentative_g = g_score[current] + (1.414 if dx != 0 and dy != 0 else 1)
+
+                if neighbor not in g_score or tentative_g < g_score[neighbor]:
+                    came_from[neighbor] = current
+                    g_score[neighbor] = tentative_g
+                    # Heurística de distância até o alvo
+                    f_score = tentative_g + (abs(neighbor[0] - end_node[0]) + abs(neighbor[1] - end_node[1]))
+                    heapq.heappush(open_set, (f_score, neighbor))
+
+        return []
 
     def draw(self, screen):
 

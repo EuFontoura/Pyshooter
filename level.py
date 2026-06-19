@@ -8,6 +8,7 @@ class Level:
     # Vermelho   (255, 0, 0)   -> spawn do jogador
     # Azul       (0, 0, 255)   -> spawn de inimigo
     # Amarelo    (255, 255, 0) -> saída/extração
+    # Rosa       (234, 54, 128) -> paredes/obstáculos
 
     def __init__(self, map_path):
         self.map_path = map_path

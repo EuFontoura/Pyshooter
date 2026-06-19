@@ -44,7 +44,6 @@ class UI:
             (10, 635)
         )
 
-        # largura proporcional
         health_width = int(
             300 *
             (

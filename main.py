@@ -9,11 +9,11 @@ screen = pygame.display.set_mode((1280, 720))
 clock = pygame.time.Clock()
 pygame.mouse.set_visible(False)
 
-
 level = Level("assets/maps/fase1_collision.png")
 
 player = Player(*level.player_spawn)
 enemies = []
+impacts = []
 
 for x, y in level.enemy_spawns:
     enemies.append(
@@ -39,6 +39,10 @@ die_sound = pygame.mixer.Sound(
     "assets/sounds/die.mp3"
 )
 
+fire_impact_image = pygame.image.load(
+    "assets/gun/fire/730.png"
+).convert_alpha()
+
 dead_bodies = []
 
 while running:
@@ -52,18 +56,29 @@ while running:
             projectiles.append(bullet)
 
     for enemy in enemies:
-
         if enemy.health <= 0:
             continue
 
-        enemy_bullet = enemy.update(player)
+        enemy_bullet = enemy.update(player, level.walls)
 
         if enemy_bullet:
             projectiles.append(enemy_bullet)
 
     level.draw(screen)
+    
+    current_time = pygame.time.get_ticks()
 
-    # Render dead bodies first (behind active entities)
+    for impact in impacts[:]:
+        age = current_time - impact["created"]
+        if age > 150:
+            impacts.remove(impact)
+            continue
+
+        fire_rect = fire_impact_image.get_rect(
+            center=(int(impact["x"]), int(impact["y"]))
+        )
+        screen.blit(fire_impact_image, fire_rect)
+
     for body in dead_bodies:
         rotated_dead_body = pygame.transform.rotate(dead_body_image, -body['angle'] - 120)
         rect = rotated_dead_body.get_rect(center=(body['x'], body['y']))
@@ -73,7 +88,6 @@ while running:
         projectile.update()
 
     for projectile in projectiles[:]:
-
         if (
             projectile.x < 0
             or projectile.x > screen.get_width()
@@ -84,42 +98,35 @@ while running:
             continue
 
         for wall in level.walls:
-
             if projectile.rect.colliderect(wall):
-
+                impacts.append({
+                "x": projectile.x,
+                "y": projectile.y,
+                "created": pygame.time.get_ticks()
+            })
                 if projectile in projectiles:
                     projectiles.remove(projectile)
-
                 break
 
         if projectile not in projectiles:
             continue
 
-        # Collision detection
         if projectile.owner == "player":
-
             hit_enemy = False
 
             for enemy in enemies:
-
                 if enemy.health <= 0:
                     continue
 
-                if projectile.rect.colliderect(
-                    enemy.get_rect()
-                ):
-
+                if projectile.rect.colliderect(enemy.get_rect()):
                     enemy.take_damage(20)
 
                     if projectile in projectiles:
                         projectiles.remove(projectile)
 
                     if enemy.health <= 0:
-
                         die_sound.play()
-
                         enemy.weapon.reload_sound.stop()
-
                         dead_bodies.append({
                             'x': enemy.x,
                             'y': enemy.y,
@@ -133,22 +140,15 @@ while running:
                 continue
 
         elif projectile.owner == "enemy" and player.health > 0:
-
-            if projectile.rect.colliderect(
-                player.get_rect()
-            ):
-
+            if projectile.rect.colliderect(player.get_rect()):
                 player.take_damage(20)
 
                 if projectile in projectiles:
                     projectiles.remove(projectile)
 
                 if player.health <= 0:
-
                     die_sound.play()
-
                     player.weapon.reload_sound.stop()
-
                     dead_bodies.append({
                         'x': player.x,
                         'y': player.y,
@@ -157,13 +157,14 @@ while running:
 
     if player.health > 0:
         player.draw(screen)
-    for enemy in enemies:
 
+    for enemy in enemies:
         if enemy.health > 0:
             enemy.draw(screen)
 
     for projectile in projectiles:
         projectile.draw(screen)
+        
     ui.draw(screen, player)
 
     mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -178,11 +179,9 @@ while running:
     )
 
     alive_enemies = sum(
-    1
-    for enemy in enemies
-    if enemy.health > 0
-)
-    print(alive_enemies)
+        1 for enemy in enemies if enemy.health > 0
+    )
+    
     pygame.display.flip()
 
     dt = clock.tick(60) / 1000

@@ -93,7 +93,6 @@ class Player:
         return None
 
     def get_rect(self):
-        # Return a fixed collision bounding box centered around the player
         return pygame.Rect(self.x - 20, self.y - 20, 40, 40)
 
     def take_damage(self, amount):
@@ -106,7 +105,6 @@ class Player:
 
     def draw(self, screen):
 
-        # tamanho da área do personagem
         canvas_size = 100
 
         player_surface = pygame.Surface(
@@ -117,13 +115,11 @@ class Player:
         center_x = canvas_size // 2
         center_y = canvas_size // 2
 
-        # desenha todas as partes juntas
         player_surface.blit(
             self.body,
             (center_x - 10, center_y - 10)
         )
 
-        # Default positions for hands and weapon
         left_hand_x = center_x - 12
         left_hand_y = center_y - 20
         right_hand_x = center_x + 6
@@ -131,13 +127,11 @@ class Player:
         weapon_x = center_x + 7
         weapon_y = center_y - 18
 
-        # Reload animation offsets
         if self.weapon.is_reloading:
             current_time = pygame.time.get_ticks()
             elapsed = current_time - self.weapon.reload_start
             progress = min(1.0, elapsed / self.weapon.reload_time)
 
-            # Weapon and Right Hand pull back slightly
             if progress < 0.2:
                 w_offset = (progress / 0.2) * 6
             elif progress > 0.8:
@@ -145,20 +139,16 @@ class Player:
             else:
                 w_offset = 6
 
-            # Move weapon and right hand down and left (towards body)
             weapon_y += w_offset
             weapon_x -= w_offset / 2
             right_hand_y += w_offset
             right_hand_x -= w_offset / 2
 
-            # Left hand fetches magazine animation
             if progress < 0.5:
-                # Move down towards body center
                 t = progress / 0.5
                 left_hand_x = int((center_x - 12) * (1 - t) + (center_x - 2) * t)
                 left_hand_y = int((center_y - 20) * (1 - t) + (center_y - 5) * t)
             else:
-                # Return to weapon
                 t = (progress - 0.5) / 0.5
                 left_hand_x = int((center_x - 2) * (1 - t) + (center_x - 12) * t)
                 left_hand_y = int((center_y - 5) * (1 - t) + (center_y - 20) * t)
@@ -184,7 +174,6 @@ class Player:
             (center_x - 7, center_y - 7)
         )
 
-        # gira o personagem inteiro
         rotated_player = pygame.transform.rotate(
             player_surface,
             -self.angle - 120
@@ -196,7 +185,6 @@ class Player:
 
         screen.blit(rotated_player, rect)
 
-        # Draw reload bar above player
         if self.weapon.is_reloading:
             current_time = pygame.time.get_ticks()
             elapsed = current_time - self.weapon.reload_start
@@ -208,19 +196,14 @@ class Player:
             bar_x = self.x - bar_width // 2
             bar_y = self.y - 45
 
-            # Background bar (dark gray)
             pygame.draw.rect(screen, (40, 40, 40), (bar_x, bar_y, bar_width, bar_height))
 
-            # Filled bar width (shrinks over time)
             fill_width = int(bar_width * remaining_ratio)
 
-            # Draw filled reload bar (gray color)
             pygame.draw.rect(screen, (150, 150, 150), (bar_x, bar_y, fill_width, bar_height))
 
-            # Draw thin border around the reload bar
             pygame.draw.rect(screen, (0, 0, 0), (bar_x - 1, bar_y - 1, bar_width + 2, bar_height + 2), 1)
 
-            # Draw "reloading" text
             reload_text = self.small_font.render("reloading", True, (200, 200, 200))
             text_rect = reload_text.get_rect(center=(self.x, bar_y - 10))
             screen.blit(reload_text, text_rect)
