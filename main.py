@@ -4,7 +4,7 @@ from player import Player
 from enemy import Enemy
 from ui import UI
 from level import Level
-from menu import Menu # <-- Importamos a nova classe!
+from menu import Menu 
 
 pygame.init()
 screen = pygame.display.set_mode((1280, 720))
@@ -16,11 +16,14 @@ JOGANDO = 1
 VITORIA = 2
 DERROTA = 3
 TUTORIAL = 4
-game_state = MENU # O jogo agora começa no Menu
+game_state = MENU 
 
 # Inicializando UI e Menu
 ui = UI()
 game_menu = Menu(screen)
+
+# Nova fonte para a tela de extração
+font_ext = pygame.font.SysFont("impact", 18)
 
 # Variáveis Globais de Gameplay
 level = None
@@ -33,7 +36,10 @@ dead_bodies = []
 def reset_game():
     """Função auxiliar para iniciar/reiniciar a partida limpa"""
     global level, player, enemies, impacts, projectiles, dead_bodies
-    level = Level("assets/maps/fase1_collision.png")
+    
+    # AGORA PASSAMOS AS DUAS IMAGENS: Visual e Colisão
+    level = Level("assets/maps/fase1.png", "assets/maps/fase1_collision.png")
+    
     player = Player(*level.player_spawn)
     enemies = []
     impacts = []
@@ -60,7 +66,6 @@ while running:
             running = False
             
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            # O Menu decide o que acontece com o clique com base no estado atual!
             new_state, should_reset, should_quit = game_menu.handle_click((mouse_x, mouse_y), game_state)
             
             game_state = new_state
@@ -179,6 +184,30 @@ while running:
             rect = rotated_dead_body.get_rect(center=(body['x'], body['y']))
             screen.blit(rotated_dead_body, rect)
 
+        # --- DESENHA PONTO DE EXTRAÇÃO SE PUDER SAIR ---
+        alive_enemies = sum(1 for enemy in enemies if enemy.health > 0)
+        
+        if alive_enemies == 0 and level.exit_point is not None:
+            # Lógica de piscar: Acende e apaga a cada 500ms (meio segundo)
+            if (current_time // 500) % 2 == 0:
+                
+                # Renderiza o texto e prepara os tamanhos
+                ext_text = font_ext.render("EXTRACTION POINT", True, (0, 0, 0))
+                ext_rect = ext_text.get_rect(center=level.exit_point.center)
+                
+                # Cria o quadrado amarelo engordando as bordas em 5 pixels do texto
+                bg_rect = pygame.Rect(0, 0, ext_rect.width + 10, ext_rect.height + 10)
+                bg_rect.center = level.exit_point.center
+                
+                # Desenha o quadrado amarelo, seguido do texto por cima
+                pygame.draw.rect(screen, (255, 255, 0), bg_rect)
+                screen.blit(ext_text, ext_rect)
+            
+            # Condição de vitória (Colisão com a área da extração)
+            if player.get_rect().colliderect(level.exit_point):
+                game_state = VITORIA
+
+        # Renderiza personagens e UI
         if player.health > 0: player.draw(screen)
         for enemy in enemies:
             if enemy.health > 0: enemy.draw(screen)
@@ -188,15 +217,8 @@ while running:
         crosshair_rect = crosshair.get_rect(center=(mouse_x, mouse_y - 15))
         screen.blit(crosshair, crosshair_rect)
 
-        # --- CHECAGEM DE VITÓRIA ---
-        alive_enemies = sum(1 for enemy in enemies if enemy.health > 0)
-        if alive_enemies == 0 and level.exit_point is not None:
-            if player.get_rect().colliderect(level.exit_point):
-                game_state = VITORIA
-
     elif game_state == VITORIA:
         pygame.mouse.set_visible(True)
-        # Mantém a tela do jogo congelada no fundo e desenha o menu por cima
         level.draw(screen)
         for body in dead_bodies:
             rotated_dead_body = pygame.transform.rotate(dead_body_image, -body['angle'] - 120)
@@ -210,7 +232,6 @@ while running:
 
     elif game_state == DERROTA:
         pygame.mouse.set_visible(True)
-        # Mantém a tela do jogo congelada no fundo e desenha o menu por cima
         level.draw(screen)
         for body in dead_bodies:
             rotated_dead_body = pygame.transform.rotate(dead_body_image, -body['angle'] - 120)
