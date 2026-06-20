@@ -27,7 +27,7 @@ class Weapon:
             +35
         )
             
-                # tiros por segundo
+        # tiros por segundo
         self.fire_rate = 10
 
         # tempo entre tiros
@@ -60,8 +60,16 @@ class Weapon:
         self.reload_time = 2000 # 2 seconds
         self.reload_start = 0
 
+        # NOVAS VARIÁVEIS: Para armazenar a posição da mira no momento do update
+        self.target_x = 0
+        self.target_y = 0
+
 
     def update(self, owner_x, owner_y, target_x, target_y):
+        
+        # Armazena a posição exata da mira/alvo para ser usada na hora do tiro
+        self.target_x = target_x
+        self.target_y = target_y
 
         dx = target_x - owner_x
         dy = target_y - owner_y
@@ -101,10 +109,21 @@ class Weapon:
 
             muzzle_x, muzzle_y = self.get_muzzle_position(x, y)
 
+            # CÁLCULO DE CORREÇÃO DE MIRA:
+            # Traça um novo ângulo indo diretamente da ponta da arma até o alvo (crosshair)
+            true_dx = self.target_x - muzzle_x
+            true_dy = self.target_y - muzzle_y
+            
+            # Previne erro de divisão se o mouse estiver exatamente em cima do cano da arma
+            if true_dx != 0 or true_dy != 0:
+                true_angle = math.degrees(math.atan2(true_dy, true_dx))
+            else:
+                true_angle = self.angle
+
             return Projectile(
                 muzzle_x,
                 muzzle_y,
-                self.angle,
+                true_angle, # Usa o ângulo corrigido em vez do ângulo visual do corpo
                 self.projectile_speed,
                 owner
             )
