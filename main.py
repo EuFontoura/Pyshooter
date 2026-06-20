@@ -22,7 +22,7 @@ game_state = MENU
 ui = UI()
 game_menu = Menu(screen)
 
-# Nova fonte para a tela de extração
+# Fonte para o ponto de extração
 font_ext = pygame.font.SysFont("impact", 18)
 
 # Variáveis Globais de Gameplay
@@ -37,7 +37,7 @@ def reset_game():
     """Função auxiliar para iniciar/reiniciar a partida limpa"""
     global level, player, enemies, impacts, projectiles, dead_bodies
     
-    # AGORA PASSAMOS AS DUAS IMAGENS: Visual e Colisão
+    # O jogo funciona com duas imagens: a visual (o que o jogador vê) e a de colisão (onde lemos os blocos rosa, vermelho, etc.)
     level = Level("assets/maps/fase1.png", "assets/maps/fase1_collision.png")
     
     player = Player(*level.player_spawn)
@@ -188,22 +188,17 @@ while running:
         alive_enemies = sum(1 for enemy in enemies if enemy.health > 0)
         
         if alive_enemies == 0 and level.exit_point is not None:
-            # Lógica de piscar: Acende e apaga a cada 500ms (meio segundo)
             if (current_time // 500) % 2 == 0:
                 
-                # Renderiza o texto e prepara os tamanhos
                 ext_text = font_ext.render("EXTRACTION POINT", True, (0, 0, 0))
                 ext_rect = ext_text.get_rect(center=level.exit_point.center)
                 
-                # Cria o quadrado amarelo engordando as bordas em 5 pixels do texto
                 bg_rect = pygame.Rect(0, 0, ext_rect.width + 10, ext_rect.height + 10)
                 bg_rect.center = level.exit_point.center
                 
-                # Desenha o quadrado amarelo, seguido do texto por cima
                 pygame.draw.rect(screen, (255, 255, 0), bg_rect)
                 screen.blit(ext_text, ext_rect)
             
-            # Condição de vitória (Colisão com a área da extração)
             if player.get_rect().colliderect(level.exit_point):
                 game_state = VITORIA
 

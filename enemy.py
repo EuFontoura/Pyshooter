@@ -4,12 +4,15 @@ import heapq
 
 from weapon import Weapon
 
+# Para a IA do inimigo, usei o algoritmo A* para encontrar o caminho mais curto até o jogador, considerando as paredes como obstáculos.
+# Por ser um algoritmo relativamente pesado e complexo, optei por comentar grandemente essa parte do código
+
 class Enemy:
-    # --- Variáveis de Classe para o Pathfinding ---
-    grid_cache = None
-    grid_size = 32 # Tamanho de cada "bloco" mental do inimigo
+    grid_cache = None # variavel para guardar onde tem parede no mapa, para otimizar o pathfinding
+    grid_size = 32 # tamanho da grade 
 
     def __init__(self, x, y):
+        # carregamento das imagens
         self.body = pygame.image.load("assets/characters/enemy/enemy_body.png").convert_alpha()
         self.head = pygame.image.load("assets/characters/enemy/enemy_head.png").convert_alpha()
         self.left_hand = pygame.image.load("assets/characters/enemy/enemy_left.png").convert_alpha()
@@ -24,7 +27,7 @@ class Enemy:
         self.alerted = False
 
         self.vision_distance = 700 
-        self.fov = 160 
+        self.fov = 160 # a visão periferica dele é de 160 graus (80 pra cada lado)
 
         self.weapon = Weapon()
 
@@ -32,14 +35,16 @@ class Enemy:
         self.health = self.max_health
         self.small_font = pygame.font.SysFont("arial", 12, bold=True)
 
-        # --- Variáveis do Pathfinding ---
-        self.path = []
-        self.last_path_time = 0
+        self.path = [] # caminho atual para o jogador
+        self.last_path_time = 0 # relogio para controlar a frequência de recalculo do caminho até o jogador
 
     def update(self, player, walls):
+            # Calculo de distancia entre o inimigo e o player
             dx = player.x - self.x
             dy = player.y - self.y
+            # Distancia euclidiana
             distance = math.sqrt(dx ** 2 + dy ** 2)
+            # Checa se o inimigo pode ver o jogador (dentro do campo de visão, distância e sem paredes no caminho)
             can_see = self.can_see_player(player, walls)
 
             if not self.alerted and can_see:
@@ -47,28 +52,28 @@ class Enemy:
 
             bullet = None
             current_time = pygame.time.get_ticks()
-
+        # Se o inimigo estiver alertado, ele tenta se mover em direção ao jogador usando o caminho calculado pelo A* e atira quando possível
             if self.alerted:
-                # Só atualiza a rota complexa a cada 500ms
+                # Recalcula o caminho para o jogador a cada meio segundo para otimizar a performance, ao invés de calcular toda frame pra não virar uma apresentação de PowerPoint
                 if current_time - self.last_path_time > 500:
                     self.path = self.find_path(player.x, player.y, walls)
                     self.last_path_time = current_time
 
-                # Se temos um caminho, vamos seguir o primeiro ponto (waypoint)
                 if self.path and distance > 100:
-                    target_x, target_y = self.path[0]
+                    target_x, target_y = self.path[0] # próximo ponto no caminho
                     dir_x = target_x - self.x
                     dir_y = target_y - self.y
                     dist_to_node = math.sqrt(dir_x**2 + dir_y**2)
 
-                    # Se chegou muito perto do waypoint atual, descarta ele para focar no próximo
+                # Se estiver perto o suficiente do próximo ponto, remove ele da lista de caminho
                     if dist_to_node < self.speed * 2:
                         self.path.pop(0)
                     elif dist_to_node > 0:
+                        # Normaliza a direção pra impedir o inimigo de andar mais rápido na diagonal
                         dir_x /= dist_to_node
                         dir_y /= dist_to_node
 
-                        # Aplica movimento com colisão física por segurança
+                    # Movimento com checagem de colisão com as paredes na horizontal e vertical separadamente pra evitar que o inimigo fique preso nas paredes
                         old_x = self.x
                         self.x += dir_x * self.speed
                         for wall in walls:
@@ -83,24 +88,23 @@ class Enemy:
                                 self.y = old_y
                                 break
 
-                # Direcionamento da visão do inimigo
+                # angulo do inimigo. Se tá vendo o player, olha pra ele, se não, olha pro próximo ponto do caminho
                 if can_see:
-                    # Se vê o jogador, mira diretamente nele
                     self.angle = math.degrees(math.atan2(dy, dx))
                 elif self.path:
-                    # Se não vê, olha para onde está andando
                     target_x, target_y = self.path[0]
                     self.angle = math.degrees(math.atan2(target_y - self.y, target_x - self.x))
 
-                # Disparo
                 self.weapon.update(self.x, self.y, player.x, player.y - 15)
 
+                # se tá vendo o player e tá na distância do tiro (350 pixels), mete o pipoco
                 if can_see and distance < 350:
                     bullet = self.weapon.shoot(self.x, self.y, "enemy")
 
             return bullet
 
     def can_see_player(self, player, walls):
+        # mesmo calculo de distância e ângulo do update, mas aqui a função retorna apenas se o inimigo pode ver o jogador ou não, sem fazer nada além disso
         dx = player.x - self.x
         dy = player.y - self.y
 
@@ -123,44 +127,47 @@ class Enemy:
 
         return True
 
+    # função para pegar o retângulo do inimigo, usada para colisões. A tal da hitbox
     def get_rect(self):
         return pygame.Rect(self.x - 20, self.y - 20, 40, 40)
 
+    # função para o inimigo tomar dano, subtrai a quantidade de vida do inimigo, mas não deixa ele com vida negativa, o que poderia causar bugs
     def take_damage(self, amount):
         self.health = max(0, self.health - amount)
 
     def find_path(self, target_x, target_y, walls):
-        # 1. Gera o mapa mental de obstáculos apenas uma vez para todos os inimigos
         if Enemy.grid_cache is None:
             Enemy.grid_cache = set()
             for x in range(0, 1280, Enemy.grid_size):
                 for y in range(0, 720, Enemy.grid_size):
-                    # Usamos inflate(16, 16) para engordar virtualmente a parede 
-                    # e impedir que o inimigo raspe os ombros nas quinas
+                    # aqui a gente checa se tem parede na célula da grade, se tiver, adiciona na cache pra otimizar o pathfinding. 
+                    # A função inflate é usada pra aumentar a hitbox do inimigo, pra evitar que ele tente passar por buracos muito pequenos entre as paredes
                     rect = pygame.Rect(x, y, Enemy.grid_size, Enemy.grid_size).inflate(16, 16)
                     if rect.collidelist(walls) != -1:
                         Enemy.grid_cache.add((x // Enemy.grid_size, y // Enemy.grid_size))
 
-        # 2. Converte as coordenadas reais para a grade
         start_node = (int(self.x // Enemy.grid_size), int(self.y // Enemy.grid_size))
         end_node = (int(target_x // Enemy.grid_size), int(target_y // Enemy.grid_size))
 
         if start_node == end_node:
             return []
 
-        open_set = []
-        heapq.heappush(open_set, (0, start_node))
-        came_from = {}
-        g_score = {start_node: 0}
+        # Implementação do algoritmo A* para encontrar o caminho mais curto até o jogador, considerando as paredes como obstáculos. 
+        # O algoritmo é otimizado usando uma cache para armazenar onde tem parede no mapa, e só recalcula o caminho a cada meio segundo para evitar que o jogo fique lento.
 
-        # 3. Inicia a busca A*
+        open_set = [] # fila de prioridade para os nós a serem explorados, ordenada pelo custo total estimado (g + h)
+        heapq.heappush(open_set, (0, start_node)) # adiciona o nó inicial à fila de prioridade com custo 0
+        came_from = {} # dicionário para rastrear o caminho percorrido, mapeando cada nó para o nó anterior no caminho
+        g_score = {start_node: 0} # dicionário para armazenar o custo real do caminho do nó inicial até cada nó, começando com 0 para o nó inicial
+
+
+        # f_score é o custo total estimado do caminho do nó inicial até o nó final passando por um determinado nó, calculado como g_score + heurística (distância Manhattan até o destino)
         while open_set:
             _, current = heapq.heappop(open_set)
 
             if current == end_node:
                 path = []
                 while current in came_from:
-                    # Converte o nó da grade de volta para o meio do pixel real na tela
                     path.append((
                         current[0] * Enemy.grid_size + Enemy.grid_size // 2,
                         current[1] * Enemy.grid_size + Enemy.grid_size // 2
@@ -168,30 +175,28 @@ class Enemy:
                     current = came_from[current]
                 path.reverse()
                 return path
-
-            # Checa os 8 vizinhos (cima, baixo, lados e diagonais)
+            # Para cada nó vizinho (incluindo diagonais), o algoritmo verifica se ele está dentro dos limites do mapa, se não é uma parede (usando a cache), e calcula o custo tentativo de chegar até ele. Se o custo tentativo for menor do que o custo registrado para aquele nó, ou se o nó ainda não tiver um custo registrado, o nó é atualizado com o novo custo e adicionado à fila de prioridade para ser explorado. O processo continua até que o nó final seja alcançado ou que a fila de prioridade esteja vazia, indicando que não há caminho disponível.
             for dx, dy in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
                 neighbor = (current[0] + dx, current[1] + dy)
 
-                # Evita sair da tela
                 if not (0 <= neighbor[0] < 1280 // Enemy.grid_size and 0 <= neighbor[1] < 720 // Enemy.grid_size):
                     continue
 
-                # Ignora se for parede
                 if neighbor in Enemy.grid_cache:
                     continue
 
-                # Peso do movimento (diagonal custa um pouco mais, ~1.4)
                 tentative_g = g_score[current] + (1.414 if dx != 0 and dy != 0 else 1)
 
                 if neighbor not in g_score or tentative_g < g_score[neighbor]:
                     came_from[neighbor] = current
                     g_score[neighbor] = tentative_g
-                    # Heurística de distância até o alvo
                     f_score = tentative_g + (abs(neighbor[0] - end_node[0]) + abs(neighbor[1] - end_node[1]))
                     heapq.heappush(open_set, (f_score, neighbor))
 
         return []
+
+# Função para desenhar o inimigo na tela, incluindo a animação de recarga da arma. A animação é feita movendo a arma e a mão direita do inimigo para baixo durante a recarga, e a mão esquerda se move para frente e para trás para simular o movimento de recarga. A barra de vida e a barra de recarga também são desenhadas acima do inimigo quando ele está ferido ou recarregando.
+# Essa parte não vou comentar muito por que é mais visual.
 
     def draw(self, screen):
 
@@ -217,7 +222,6 @@ class Enemy:
         weapon_x = center_x + 7
         weapon_y = center_y - 18
 
-        # Reload animation offsets
         if self.weapon.is_reloading:
             current_time = pygame.time.get_ticks()
             elapsed = current_time - self.weapon.reload_start

@@ -35,10 +35,10 @@ class Weapon:
 
         self.projectile_speed = 15
 
-        # último disparo
+        # checa se foi o último disparo
         self.last_shot = 0
 
-        # som
+        # som de tiro e de recarga
         self.shot_sound = pygame.mixer.Sound(
             "assets/sounds/shoot.mp3"
         )
@@ -60,14 +60,12 @@ class Weapon:
         self.reload_time = 2000 # 2 seconds
         self.reload_start = 0
 
-        # NOVAS VARIÁVEIS: Para armazenar a posição da mira no momento do update
         self.target_x = 0
         self.target_y = 0
 
 
     def update(self, owner_x, owner_y, target_x, target_y):
         
-        # Armazena a posição exata da mira/alvo para ser usada na hora do tiro
         self.target_x = target_x
         self.target_y = target_y
 
@@ -78,7 +76,6 @@ class Weapon:
             math.atan2(dy, dx)
         )
 
-        # Check for reload completion
         if self.is_reloading:
             current_time = pygame.time.get_ticks()
             if current_time - self.reload_start >= self.reload_time:
@@ -109,8 +106,7 @@ class Weapon:
 
             muzzle_x, muzzle_y = self.get_muzzle_position(x, y)
 
-            # CÁLCULO DE CORREÇÃO DE MIRA:
-            # Traça um novo ângulo indo diretamente da ponta da arma até o alvo (crosshair)
+            # MIRA
             true_dx = self.target_x - muzzle_x
             true_dy = self.target_y - muzzle_y
             
@@ -123,7 +119,7 @@ class Weapon:
             return Projectile(
                 muzzle_x,
                 muzzle_y,
-                true_angle, # Usa o ângulo corrigido em vez do ângulo visual do corpo
+                true_angle, # Usa o ângulo corrigido em vez do ângulo visual do corpo, corrigindo o bug da mira desalinhada
                 self.projectile_speed,
                 owner
             )

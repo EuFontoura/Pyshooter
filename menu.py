@@ -29,7 +29,7 @@ class Menu:
         self.exit_btn = pygame.Rect(540, 450, 200, 80)
         self.back_btn = pygame.Rect(50, 620, 150, 50)
 
-        # Hitboxes configuradas por você no main.py original
+        # Hitboxes dos Botões de Vitória e Derrota no jogo
         self.ok_win_btn = pygame.Rect(540, 360, 200, 60)
         self.yes_lose_btn = pygame.Rect(480, 360, 160, 60)
         self.no_lose_btn = pygame.Rect(660, 360, 160, 60)
@@ -47,7 +47,7 @@ class Menu:
     def draw_tutorial(self):
         self.screen.blit(self.main_bg, (0, 0))
         
-        # Fundo escuro transparente para facilitar a leitura
+        # Overlay semitransparente para destacar o texto do tutorial
         overlay = pygame.Surface((1280, 720), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 180))
         self.screen.blit(overlay, (0, 0))
@@ -98,7 +98,7 @@ class Menu:
                 
         elif current_state == 3: # DERROTA
             if self.yes_lose_btn.collidepoint(x, y):
-                return 1, True, False # Reinicia partida
+                return 1, True, False # Reinicia partida, mas tem um delayzinho
             if self.no_lose_btn.collidepoint(x, y):
                 return 0, False, False # Volta pro MENU
                 

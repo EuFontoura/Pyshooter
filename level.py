@@ -9,6 +9,13 @@ class Level:
         self.image = pygame.transform.scale(self.image, (1280, 720))
 
         # 2. Imagem de dados invisível (onde lemos os blocos rosa, vermelho, etc.)
+
+        # Cores na imagem de colisão:
+        # Vermelho (255, 0, 0)= Spawn do Player 
+        # Azul (0, 0, 255) = Spawn dos Inimigos 
+        # Amarelo (255, 255, 0) = Zona de Extração 
+        # Rosa (234, 54, 128) = Paredes
+
         self.collision_image = pygame.image.load(collision_map_path).convert()
         self.collision_image = pygame.transform.scale(self.collision_image, (1280, 720))
 
@@ -24,17 +31,14 @@ class Level:
         self.load_collisions()
 
     def draw(self, screen):
-        # O jogo sempre desenha a arte limpa da fase
         screen.blit(self.image, (0, 0))
 
     def load_markers(self):
-        # Lemos a largura e altura da imagem de colisão
         width = self.collision_image.get_width()
         height = self.collision_image.get_height()
 
         for y in range(height):
             for x in range(width):
-                # Extrai a cor da imagem invisível de colisões!
                 color = self.collision_image.get_at((x, y))[:3]
 
                 # Spawn Player (Vermelho)
